@@ -26,18 +26,6 @@ class HTTPRequest(HTTPMessage):
         return ret
 
 
-class HTTPResponse(HTTPMessage):
-    def __int__(self, status_code, status_message, version=None, connection=None, content_length=None,
-                content_type=None, date=None, body=None):
-        super().__init__(connection=connection, version=version)
-        self.status_code = status_code
-        self.status_msg = status_message
-        self.content_len = content_length
-        self.content_type = content_type
-        self.date = date
-        self.body = body
-
-
 def get_version(param):
     """
 
@@ -66,7 +54,8 @@ def HTTP_request_parser(msg):
 
     def request_line_parser(line):
         tmp = line.split(' ')
-        v = get_version(tmp[2])
+        if len(tmp) >= 3:
+            v = get_version(tmp[2])
         if len(tmp) != 3 or len(tmp[0]) == 0 or len(tmp[1]) == 0 or v is None:
             return False, None, None, None
         return True, tmp[0], tmp[1], v
