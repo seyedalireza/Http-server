@@ -9,3 +9,4 @@ TEXT_HTML_TYPE = "text/html"
 NOT_FOUND_HTML = "404.html"
 FILES_HTML = "files.html"
 IMPLEMENTED_METHODS = ["GET", "HEAD", "POST", "PUT", "DELETE"]
+TIME_OUT = 60
