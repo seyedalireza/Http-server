@@ -90,4 +90,7 @@ def response_creator(request_msg):
                                 content_length=os.stat(NOT_FOUND_HTML).st_size, content_type=NOT_FOUND_HTML,
                                 date=datetime.utcnow(), body=html_file.read())
         html_file.close()
-    return response, request.keep_alive
+    keep_alive = None
+    if request is not None:
+        keep_alive = request.keep_alive
+    return response, keep_alive
