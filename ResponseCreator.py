@@ -44,8 +44,17 @@ def response_creator(request_msg):
     :return: An HTTP Response Object. Keep_alive.
     """
     request = HTTP_request_parser(request_msg)
-    response = None
-    if request is None:
+    b = True
+    if request is not None and request.URL[0] == '/' and len(request.URL) > 1:
+        request.URL = request.URL[1:]
+        b = False
+    if b and request is not None and request.URL[0] == '/' and len(request.URL) == 1:
+        html_file = open(FILES_HTML, "rb")
+        response = HTTPResponse(status_code=200, status_message="OK", version=1.0,
+                                content_length=os.stat(FILES_HTML).st_size, content_type=TEXT_HTML_TYPE,
+                                date=datetime.utcnow(), body=html_file.read())
+        html_file.close()
+    elif request is None:
         html_file = open(BAD_REQUEST_HTML, "rb")
         response = HTTPResponse(status_code=400, status_message="Bad Request", version=1.0, connection="close",
                                 content_length=os.stat(BAD_REQUEST_HTML).st_size, content_type=TEXT_HTML_TYPE,
@@ -81,4 +90,4 @@ def response_creator(request_msg):
                                 content_length=os.stat(NOT_FOUND_HTML).st_size, content_type=NOT_FOUND_HTML,
                                 date=datetime.utcnow(), body=html_file.read())
         html_file.close()
-    return response
+    return response, request.keep_alive
