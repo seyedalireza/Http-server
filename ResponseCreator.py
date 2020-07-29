@@ -51,6 +51,7 @@ def response_creator(request_msg):
     """
     request = HTTP_request_parser(request_msg)
     b = True
+    response_time = format_date_time(mktime(datetime.now().timetuple()))
     if request is not None and request.URL[0] == '/' and len(request.URL) > 1:
         request.URL = request.URL[1:]
         b = False
@@ -58,25 +59,25 @@ def response_creator(request_msg):
         html_file = open(FILES_HTML, "rb")
         response = HTTPResponse(status_code=200, status_message="OK", version=1.0,
                                 content_length=os.stat(FILES_HTML).st_size, content_type=TEXT_HTML_TYPE,
-                                body=html_file.read())
+                                date=response_time, body=html_file.read())
         html_file.close()
     elif request is None:
         html_file = open(BAD_REQUEST_HTML, "rb")
         response = HTTPResponse(status_code=400, status_message="Bad Request", version=1.0, connection="close",
                                 content_length=os.stat(BAD_REQUEST_HTML).st_size, content_type=TEXT_HTML_TYPE,
-                                body=html_file.read())
+                                date=response_time, body=html_file.read())
         html_file.close()
     elif request.method not in IMPLEMENTED_METHODS:
         html_file = open(NOT_IMPLEMENTED_HTML, "rb")
         response = HTTPResponse(status_code=501, status_message="Not Implemented", version=1.0, connection="close",
                                 content_length=os.stat(NOT_IMPLEMENTED_HTML).st_size, content_type=TEXT_HTML_TYPE,
-                                body=html_file.read())
+                                date=response_time, body=html_file.read())
         html_file.close()
     elif request.method != "GET":
         html_file = open(NOT_ALLOWED_HTML, "rb")
         response = HTTPResponse(status_code=405, status_message="Method Not Allowed", version=1.0, connection="close",
                                 content_length=os.stat(NOT_ALLOWED_HTML).st_size, content_type=TEXT_HTML_TYPE,
-                                body=html_file.read())
+                                date=response_time, body=html_file.read())
         html_file.close()
     elif os.path.isfile("files/" + request.URL):
         request.URL = "files/" + request.URL
@@ -94,12 +95,12 @@ def response_creator(request_msg):
             content_length = len(body)
         response = HTTPResponse(status_code=200, status_message="OK", version=1.0, connection="close",
                                 content_length=content_length, content_type=content_type,
-                                body=body, content_encoding=content_encoding)
+                                date=response_time, body=body, content_encoding=content_encoding)
     else:
         html_file = open(NOT_FOUND_HTML, "rb")
         response = HTTPResponse(status_code=404, status_message="Not Found", version=1.0, connection="close",
                                 content_length=os.stat(NOT_FOUND_HTML).st_size, content_type=NOT_FOUND_HTML,
-                                body=html_file.read())
+                                date=response_time, body=html_file.read())
         html_file.close()
     keep_alive = None
     if request is not None:
