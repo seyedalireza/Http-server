@@ -2,7 +2,6 @@ import threading
 import time
 import socket as sc
 import ResponseCreator
-import logging
 import HP
 
 
@@ -13,12 +12,14 @@ class HttpServer(threading.Thread):
         self.name = "HttpServer-" + str(port)
         self.port: int = port
         self.socket: sc.socket = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
-        self.open_connections = list()
+        self.connections = list()
+        self.is_running = False
 
     def run(self) -> None:
         """
         This function runs a simple http server.
         """
+        self.is_running = True
         socket = self.socket
         socket.bind(("localhost", self.port))
         print("Http server started on port " + str(self.port))
@@ -26,14 +27,22 @@ class HttpServer(threading.Thread):
         # Listen for incoming connections
         socket.listen(1)
 
-        while True:
+        while self.is_running:
             connection, address = socket.accept()
             print("Connection established from " + str(address))
             request_handler = RequestHandler(connection, address)
-            self.open_connections.append(request_handler)
+            self.connections.append(request_handler)
             request_handler.start()
 
-        # TODO close connection
+    def stop(self) -> None:
+        """
+        Stop Http server and close connections.
+        """
+        self.socket.close()
+        self.is_running = False
+        for rh in self.connections:
+            if rh.is_running:
+                rh.stop()
 
 
 class RequestHandler(threading.Thread):
@@ -50,12 +59,14 @@ class RequestHandler(threading.Thread):
         self.connection.settimeout(HP.TIME_OUT)
         self.alive_time = time.time() + 60
         super().__init__()
+        self.is_running = False
 
     def run(self) -> None:
         """
         Implementation of request handler.
         """
-        while time.time() <= self.alive_time:
+        self.is_running = True
+        while time.time() <= self.alive_time and self.is_running:
             input_data = bytearray()
             while True:
                 try:
@@ -76,3 +87,7 @@ class RequestHandler(threading.Thread):
                 self.connection.close()
                 return
         self.connection.close()
+        self.is_running = False
+
+    def stop(self):
+        self.is_running = False
