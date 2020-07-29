@@ -61,9 +61,9 @@ class RequestHandler(threading.Thread):
                 try:
                     data = self.connection.recv(2048)
                     print(data.decode())
-                    if not data or data.decode() == "\r\n":
-                        break
                     input_data.extend(data)
+                    if not data or data.decode().splitlines()[-1] == "":
+                        break
                 except IOError:
                     self.connection.close()
                     return
