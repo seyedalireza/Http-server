@@ -76,7 +76,7 @@ class RequestHandler(threading.Thread):
                     input_data.extend(data)
                     if not data or data.decode().splitlines()[-1] == "":
                         break
-                except IOError:
+                except:
                     self.connection.close()
                     return
             print(input_data.decode())
