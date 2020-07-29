@@ -91,7 +91,7 @@ def HTTP_request_parser(msg):
                     break
         elif h[0] == ACCEPT_ENCODING_HEADER:
             tmp = h[1].split(', ')
-            if "gzip" in h[1]:
+            if "gzip" in tmp:
                 accept_encoding = "gzip"
     http_req_retv = HTTPRequest(method=method, URL=URL, version=version, connection=connection, keep_alive=keep_alive,
                                 accept_encoding=accept_encoding, body=parts[-1])

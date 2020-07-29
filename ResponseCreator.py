@@ -8,7 +8,7 @@ import gzip
 
 class HTTPResponse(HTTPMessage):
     def __init__(self, status_code, status_message, version=None, connection=None, content_length=None,
-                 content_type=None, date=None, body=None):
+                 content_type=None, date=None, body=None, content_encoding=None):
         super().__init__(connection=connection, version=version)
         self.status_code = status_code
         self.status_msg = status_message
@@ -16,6 +16,7 @@ class HTTPResponse(HTTPMessage):
         self.content_type = content_type
         self.date = date
         self.body = body
+        self.content_encoding = content_encoding
 
     def __str__(self):
         ret = self.header_str() + str(self.body)
@@ -27,6 +28,8 @@ class HTTPResponse(HTTPMessage):
         ret = ret + "Content-Length: " + str(self.content_len) + "\r\n"
         ret = ret + "Content-Type: " + str(self.content_type) + "\r\n"
         ret = ret + "Date: " + str(self.date) + "\r\n"
+        if self.content_encoding is not None:
+            ret = ret + "Content-Encoding: " + str(self.content_encoding) + "\r\n"
         ret = ret + "\r\n"
         return ret
 
@@ -50,12 +53,9 @@ def response_creator(request_msg):
         b = False
     if b and request is not None and request.URL[0] == '/' and len(request.URL) == 1:
         html_file = open(FILES_HTML, "rb")
-        body = html_file.read()
-        if body is not None and request.accept_encoding == "gzip":
-            body = gzip.compress(body)
         response = HTTPResponse(status_code=200, status_message="OK", version=1.0,
                                 content_length=os.stat(FILES_HTML).st_size, content_type=TEXT_HTML_TYPE,
-                                date=datetime.utcnow(), body=body)
+                                date=datetime.utcnow(), body=html_file.read())
         html_file.close()
     elif request is None:
         html_file = open(BAD_REQUEST_HTML, "rb")
@@ -83,11 +83,15 @@ def response_creator(request_msg):
             body = file.read()
         else:
             body = None
+        content_encoding = None
+        content_length = os.stat(request.URL).st_size
         if body is not None and request.accept_encoding == "gzip":
             body = gzip.compress(body)
+            content_encoding = "gzip"
+            content_length = len(body)
         response = HTTPResponse(status_code=200, status_message="OK", version=1.0, connection="close",
-                                content_length=os.stat(request.URL).st_size, content_type=content_type,
-                                date=datetime.utcnow(), body=body)
+                                content_length=content_length, content_type=content_type,
+                                date=datetime.utcnow(), body=body, content_encoding=content_encoding)
     else:
         html_file = open(NOT_FOUND_HTML, "rb")
         response = HTTPResponse(status_code=404, status_message="Not Found", version=1.0, connection="close",
