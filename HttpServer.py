@@ -70,6 +70,7 @@ class RequestHandler(threading.Thread):
             input_data = bytearray()
             while True:
                 try:
+                    self.connection.settimeout(self.alive_time - time.time())
                     data = self.connection.recv(2048)
                     print(data.decode())
                     input_data.extend(data)
