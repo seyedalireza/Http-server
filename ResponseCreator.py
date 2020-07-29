@@ -72,7 +72,8 @@ def response_creator(request_msg):
                                 content_length=os.stat(NOT_ALLOWED_HTML).st_size, content_type=TEXT_HTML_TYPE,
                                 date=datetime.utcnow(), body=html_file.read())
         html_file.close()
-    elif os.path.isfile(request.URL):
+    elif os.path.isfile("files/" + request.URL):
+        request.URL = "files/" + request.URL
         content_type = magic.from_file(request.URL, mime=True)
         file = open(request.URL, "rb")
         if file is not None:
