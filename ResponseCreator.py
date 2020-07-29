@@ -50,9 +50,12 @@ def response_creator(request_msg):
         b = False
     if b and request is not None and request.URL[0] == '/' and len(request.URL) == 1:
         html_file = open(FILES_HTML, "rb")
+        body = html_file.read()
+        if body is not None and request.accept_encoding == "gzip":
+            body = gzip.compress(body)
         response = HTTPResponse(status_code=200, status_message="OK", version=1.0,
                                 content_length=os.stat(FILES_HTML).st_size, content_type=TEXT_HTML_TYPE,
-                                date=datetime.utcnow(), body=html_file.read())
+                                date=datetime.utcnow(), body=body)
         html_file.close()
     elif request is None:
         html_file = open(BAD_REQUEST_HTML, "rb")
