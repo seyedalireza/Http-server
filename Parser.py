@@ -90,8 +90,9 @@ def HTTP_request_parser(msg):
                         keep_alive = DEFAULT_KEEP_ALIVE_TIME
                     break
         elif h[0] == ACCEPT_ENCODING_HEADER:
-            if h[1] == "gzip":
-                accept_encoding = h[1]
+            tmp = h[1].split(', ')
+            if "gzip" in h[1]:
+                accept_encoding = "gzip"
     http_req_retv = HTTPRequest(method=method, URL=URL, version=version, connection=connection, keep_alive=keep_alive,
                                 accept_encoding=accept_encoding, body=parts[-1])
     return http_req_retv
