@@ -15,6 +15,11 @@ class HTTPRequest:
         ret = ret + "\nbody: " + str(self.body)
         return ret
 
+    def to_byte(self):
+        ret = self.header_str().encode()
+        ret = ret + self.body
+        return ret
+
     @staticmethod
     def create_server_request(request, path: str):
         new = HTTPRequest(path, request.method, request.version, body=request.body)
@@ -23,6 +28,13 @@ class HTTPRequest:
             new.headers["Connection"] = request.headers["Proxy-Connection"]
             del new.headers["Proxy-Connection"]
         return new
+
+    def header_str(self):
+        ret = str(self.method) + " " + str(self.URL) + " " + "HTTP/" + str(self.version) + "\r\n"
+        for header, value in self.headers:
+            ret = str(header) + ": " + str(value) + "\r\n"
+        ret = ret + "\r\n"
+        return ret
 
 
 class HTTPProxyMessage:
