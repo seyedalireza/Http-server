@@ -1,6 +1,7 @@
 import threading
 import socket as sc
 import time
+from ProxyUtils import *
 
 
 class HttpProxyServer(threading.Thread):
@@ -44,6 +45,15 @@ class HttpProxyServer(threading.Thread):
                 rh.stop()
 
 
+def split_url(url: str):
+    if url.lower().startswith("http://"):
+        spited = url.split("/")
+        return spited[2], "/" + "/".join(spited[3:])
+    else:
+        spited = url.split("/")
+        return spited[0], "/" + "/".join(spited[1:])
+
+
 class RequestHandler(threading.Thread):
 
     def __init__(self, connection, client_address):
@@ -68,10 +78,36 @@ class RequestHandler(threading.Thread):
         self.is_running = True
         while time.time() <= self.alive_time and self.is_running:
             query = self.read_until_new_line()
+            if query == -1:
+                break
+            query = HTTP_request_parser(query.decode())
+            url, path = split_url(query.URL)
+            if self.target_connection is None:
+                self.target_connection = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
+                self.target_connection.connect((sc.gethostbyname(url), 80))
+            server_message = HTTPRequest.create_server_request(query, path)
+            try:
+                self.target_connection.send(server_message.to_byte())
+            except:
+                break
+            response = self.read_response()
+            if response == -1:
+                break
+            try:
+                self.connection.send(response)
+            except:
+                break
             print(query.decode())
             # TODO: parse request and convert it to another query and open connection of it is closed.
             # TODO: handle if query has body (content-length)
-        self.connection.close()
+        try:
+            self.connection.close()
+        except:
+            pass
+        try:
+            self.target_connection.close()
+        except:
+            pass
         self.is_running = False
 
     def read_until_new_line(self):
