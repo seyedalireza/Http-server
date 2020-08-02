@@ -77,7 +77,7 @@ class RequestHandler(threading.Thread):
         """
         self.is_running = True
         while time.time() <= self.alive_time and self.is_running:
-            query = self.read_until_new_line()
+            query = self.read_until_new_line(self.connection)
             if query == -1:
                 break
             query = HTTP_request_parser(query.decode())
@@ -110,20 +110,53 @@ class RequestHandler(threading.Thread):
             pass
         self.is_running = False
 
-    def read_until_new_line(self):
+    def read_response(self):
+        headers = self.read_until_new_line(self.target_connection)
+        if headers == -1:
+            return -1
+        headers_lines = headers.decode().split("\r\n")[1:]
+        is_chunk = False
+        content_len = 0
+        for line in headers_lines:
+            spited = line.split(": ")
+            if spited[0] == "Content-Length":
+                content_len = int(spited[1])
+            elif spited[0] == "Transfer-Encoding" and spited[1] == "chunked":
+                is_chunk = True
+        body = self.read_body(content_len, self.target_connection, is_chunk)
+        if body == -1:
+            return -1
+        return headers.extend(body)
+
+    def read_until_new_line(self, connection):
         input_data = bytearray()
         while True:
             try:
-                self.connection.settimeout(self.alive_time - time.time())
-                data = self.connection.recv(2048)
+                connection.settimeout(self.alive_time - time.time())
+                data = connection.recv(2048)
                 print(data.decode())
                 input_data.extend(data)
                 if not data or data.decode().splitlines()[-1] == "":
                     break
             except:
-                self.connection.close()
+                connection.close()
+                return -1
+        return input_data
+
+    def read_body(self, length, socket, is_chunk: bool):
+        input_data = bytearray()
+        while is_chunk or len(input_data) < length:
+            try:
+                socket.settimeout(self.alive_time - time.time())
+                data = socket.recv(2048)
+                if is_chunk and len(data) == 0:
+                    break
+                input_data.extend(data)
+            except:
+                socket.close()
                 return -1
         return input_data
 
     def stop(self):
         self.is_running = False
+
