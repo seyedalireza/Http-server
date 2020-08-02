@@ -77,27 +77,37 @@ class RequestHandler(threading.Thread):
         """
         self.is_running = True
         while time.time() <= self.alive_time and self.is_running:
-            query = self.read_until_new_line(self.connection)
-            if query == -1:
+            query, _ = self.read_chunck(self.connection)
+            if query == -1 or query is None or len(query) == 0:
                 break
+            print(query)
             query = HTTP_request_parser(query.decode())
             url, path = split_url(query.URL)
+            print("Send: ")
+            print(query)
+            print(":)")
+            print(url)
+            print(path)
+            print("End send message")
             if self.target_connection is None:
                 self.target_connection = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
                 self.target_connection.connect((sc.gethostbyname(url), 80))
             server_message = HTTPRequest.create_server_request(query, path)
+            print("Server mess:")
+            print(server_message)
+            print("end serv mess")
             try:
                 self.target_connection.send(server_message.to_byte())
             except:
                 break
             response = self.read_response()
-            if response == -1:
+            print("response: " + str(response))
+            if response == -1 or response is None or len(response) == 0:
                 break
             try:
                 self.connection.send(response)
             except:
                 break
-            print(query.decode())
             # TODO: parse request and convert it to another query and open connection of it is closed.
             # TODO: handle if query has body (content-length)
         try:
@@ -111,7 +121,8 @@ class RequestHandler(threading.Thread):
         self.is_running = False
 
     def read_response(self):
-        headers = self.read_until_new_line(self.target_connection)
+        headers, tmp_body = self.read_chunck(self.target_connection)
+        print("headers: " + str(headers))
         if headers == -1:
             return -1
         headers_lines = headers.decode().split("\r\n")[1:]
@@ -123,25 +134,30 @@ class RequestHandler(threading.Thread):
                 content_len = int(spited[1])
             elif spited[0] == "Transfer-Encoding" and spited[1] == "chunked":
                 is_chunk = True
-        body = self.read_body(content_len, self.target_connection, is_chunk)
+        print("content: " + str(content_len))
+        print("tr_en: " + str(is_chunk))
+        body = tmp_body + self.read_body(content_len - len(tmp_body), self.target_connection, is_chunk)
+        print("body: " + str(body))
         if body == -1:
             return -1
-        return headers.extend(body)
+        headers.extend(body)
+        return headers
 
-    def read_until_new_line(self, connection):
+    def read_chunck(self, connection):
         input_data = bytearray()
         while True:
             try:
                 connection.settimeout(self.alive_time - time.time())
                 data = connection.recv(2048)
-                print(data.decode())
+                print("in read_chunck: " + data.decode())
                 input_data.extend(data)
-                if not data or data.decode().splitlines()[-1] == "":
+                if not data or "\r\n\r\n" in input_data.decode():
                     break
             except:
                 connection.close()
                 return -1
-        return input_data
+        end_header = input_data.find(b"\r\n\r\n")
+        return input_data[:end_header + 4], input_data[end_header + 4:]
 
     def read_body(self, length, socket, is_chunk: bool):
         input_data = bytearray()
@@ -159,4 +175,3 @@ class RequestHandler(threading.Thread):
 
     def stop(self):
         self.is_running = False
-

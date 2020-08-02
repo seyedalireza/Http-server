@@ -7,22 +7,19 @@ class HTTPRequest:
         self.headers = headers
 
     def __str__(self):
-        ret = "method: " + str(self.method) + " URL: " + str(self.URL) + " version: " + str(
-            self.version)
-        ret = ret + "\nconnection: " + str(self.connection)
-        ret = ret + "\nkeep-alive: " + str(self.keep_alive)
-        ret = ret + "\naccept-encoding: " + str(self.accept_encoding)
-        ret = ret + "\nbody: " + str(self.body)
+        ret = self.header_str()
+        ret = ret + str(self.body)
         return ret
 
     def to_byte(self):
         ret = self.header_str().encode()
-        ret = ret + self.body
+        if self.body is not None:
+            ret = ret + self.body.encode()
         return ret
 
     @staticmethod
     def create_server_request(request, path: str):
-        new = HTTPRequest(path, request.method, request.version, body=request.body)
+        new = HTTPRequest(method=request.method, URL=path, version=request.version, body=request.body)
         new.headers = request.headers
         if "Proxy-Connection" in request.headers:
             new.headers["Connection"] = request.headers["Proxy-Connection"]
@@ -32,7 +29,7 @@ class HTTPRequest:
     def header_str(self):
         ret = str(self.method) + " " + str(self.URL) + " " + "HTTP/" + str(self.version) + "\r\n"
         for header, value in self.headers:
-            ret = str(header) + ": " + str(value) + "\r\n"
+            ret = ret + str(header) + ": " + str(value) + "\r\n"
         ret = ret + "\r\n"
         return ret
 
