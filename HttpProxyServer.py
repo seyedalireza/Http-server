@@ -82,6 +82,8 @@ class RequestHandler(threading.Thread):
                 break
             print(query)
             query = HTTP_request_parser(query.decode())
+            if "Keep-Alive" in query.headers:
+                self.alive_time = time.time() + query.headers["Keep-Alive"]
             url, path = split_url(query.URL)
             print("Send: ")
             print(query)
@@ -155,7 +157,7 @@ class RequestHandler(threading.Thread):
                     break
             except:
                 connection.close()
-                return -1
+                return -1, None
         end_header = input_data.find(b"\r\n\r\n")
         return input_data[:end_header + 4], input_data[end_header + 4:]
 
