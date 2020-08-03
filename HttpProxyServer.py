@@ -108,18 +108,6 @@ class AnalyzerHandler(threading.Thread):
                 msg = ""
 
                 msg = msg + "Packet length received from server(mean, std): ("
-                if len(self.analyzer.client_packet_lengths) > 0:
-                    msg = msg + str(statistics.mean(self.analyzer.client_packet_lengths))
-                else:
-                    msg = msg + "0"
-                msg = msg + ", "
-                if len(self.analyzer.client_packet_lengths) > 1:
-                    msg = msg + str(statistics.stdev(self.analyzer.client_packet_lengths))
-                else:
-                    msg = msg + "0"
-                msg = msg + ")\n"
-
-                msg = msg + "Packet length received from client(mean, std): ("
                 if len(self.analyzer.server_packet_lengths) > 0:
                     msg = msg + str(statistics.mean(self.analyzer.server_packet_lengths))
                 else:
@@ -127,6 +115,18 @@ class AnalyzerHandler(threading.Thread):
                 msg = msg + ", "
                 if len(self.analyzer.server_packet_lengths) > 1:
                     msg = msg + str(statistics.stdev(self.analyzer.server_packet_lengths))
+                else:
+                    msg = msg + "0"
+                msg = msg + ")\n"
+
+                msg = msg + "Packet length received from client(mean, std): ("
+                if len(self.analyzer.client_packet_lengths) > 0:
+                    msg = msg + str(statistics.mean(self.analyzer.client_packet_lengths))
+                else:
+                    msg = msg + "0"
+                msg = msg + ", "
+                if len(self.analyzer.client_packet_lengths) > 1:
+                    msg = msg + str(statistics.stdev(self.analyzer.client_packet_lengths))
                 else:
                     msg = msg + "0"
                 msg = msg + ")\n"
