@@ -1,8 +1,7 @@
 import socket as sc
 import threading
 import time
-from dns import resolver
-from dns import reversename
+import statistics
 
 from ProxyUtils import *
 
@@ -26,10 +25,12 @@ class ProxyAnalyzer(threading.Thread):
         self.is_running = True
         socket = self.socket
         socket.bind(("localhost", self.port))
-        socket.listen(1)
+        socket.listen()
         while self.is_running:
+            print("Proxy analyzer waiting for connection")
             connection, address = socket.accept()
-            analyze_handler = AnalyzerHandler(connection, address)
+            print("connection established for proxy analyzer")
+            analyze_handler = AnalyzerHandler(connection, address, self)
             self.connections.append(analyze_handler)
             analyze_handler.start()
 
@@ -85,34 +86,73 @@ def represent_int(param):
 
 class AnalyzerHandler(threading.Thread):
 
-    def __init__(self, connection, client_address):
+    def __init__(self, connection, client_address, analyzer: ProxyAnalyzer):
         super().__init__()
         self.connection: sc.socket = connection
         self.client_address = client_address
         self.is_running = False
+        self.analyzer = analyzer
+        self.connection.settimeout(60)
 
     def run(self) -> None:
         self.is_running = True
         while self.is_running:
             try:
-                request = self.connection.recv(2048).decode()
+                request = ""
+                r = self.connection.recv(2048)
+                while r.decode()[-1] != '\n':
+                    request = request + r.decode()
+                    r = self.connection.recv(2048)
             except:
                 break
             if request == "packet length stats":
-                # TODO
-                pass
+                msg = ""
+
+                msg = msg + "Packet length received from server(mean, std): ("
+                msg = msg + str(statistics.mean(self.analyzer.client_packet_lengths))
+                msg = msg + ", "
+                msg = msg + str(statistics.stdev(self.analyzer.client_packet_lengths))
+                msg = msg + ")\n"
+
+                msg = msg + "Packet length received from client(mean, std): ("
+                msg = msg + str(statistics.mean(self.analyzer.server_packet_lengths))
+                msg = msg + ", "
+                msg = msg + str(statistics.stdev(self.analyzer.server_packet_lengths))
+                msg = msg + ")\n"
+
+                msg = msg + "Body length received from server(mean, std): ("
+                msg = msg + str(statistics.mean(self.analyzer.server_body_lengths))
+                msg = msg + ", "
+                msg = msg + str(statistics.stdev(self.analyzer.server_body_lengths))
+                msg = msg + ")\n"
+
+                self.connection.send(msg.encode())
+
             elif request == "type count":
-                # TODO
-                pass
+                msg = ""
+                for msg_type, count in self.analyzer.type_count.items():
+                    msg = msg + str(msg_type) + ": " + str(count) + "\n"
+                self.connection.send(msg.encode())
             elif request == "status count":
-                # TODO
-                pass
+                msg = ""
+                for status, count in self.analyzer.status_count.items():
+                    msg = msg + str(status) + ": " + str(count) + "\n"
+                self.connection.send(msg.encode())
             elif request[:4] == "top " and request[-14:] == " visited hosts" and represent_int(request[4:-14]):
-                # TODO
-                pass
+                k = int(request[4:-14])
+                sites = []
+                for site, visit in self.analyzer.visits.items():
+                    sites.append([visit, site])
+                sites.sort()
+                msg = ""
+                for i in range(min(k, len(sites)) - 1, -1, -1):
+                    msg = msg + str(min(k, len(sites)) - i) + ". " + sites[i][1] + "\n"
+                self.connection.send(msg.encode())
+            elif request == "exit":
+                self.connection.send(b"Bye\n")
+                break
             else:
-                # TODO
-                pass
+                self.connection.send(b"Bad Request\n")
         try:
             self.connection.close()
         except:
