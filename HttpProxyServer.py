@@ -1,18 +1,104 @@
-import threading
 import socket as sc
+import threading
 import time
+
 from ProxyUtils import *
+
+
+class ProxyAnalyzer(threading.Thread):
+    client_packet_lengths = []
+    server_packet_lengths = []
+    server_body_lengths = []
+    type_count = dict({})
+    status_count = dict({})
+    visits = dict({})
+
+    def __init__(self, port):
+        super().__init__()
+        self.port: int = port
+        self.socket = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
+        self.connections = list()
+        self.is_running = False
+
+    def run(self) -> None:
+        self.is_running = True
+        socket = self.socket
+        socket.bind(("localhost", self.port))
+        socket.listen(1)
+        while self.is_running:
+            connection, address = socket.accept()
+            analyze_handler = AnalyzerHandler(connection, address)
+            self.connections.append(analyze_handler)
+            analyze_handler.start()
+
+    def stop(self) -> None:
+        try:
+            self.socket.close()
+        except:
+            pass
+        self.is_running = False
+        for rh in self.connections:
+            if rh.is_running:
+                rh.stop()
+
+
+def represent_int(param):
+    try:
+        int(param)
+        return True
+    except ValueError:
+        return False
+
+
+class AnalyzerHandler(threading.Thread):
+
+    def __init__(self, connection, client_address):
+        super().__init__()
+        self.connection: sc.socket = connection
+        self.client_address = client_address
+        self.is_running = False
+
+    def run(self) -> None:
+        self.is_running = True
+        while self.is_running:
+            try:
+                request = self.connection.recv(2048).decode()
+            except:
+                break
+            if request == "packet length stats":
+                # TODO
+                pass
+            elif request == "type count":
+                # TODO
+                pass
+            elif request == "status count":
+                # TODO
+                pass
+            elif request[:4] == "top " and request[-14:] == " visited hosts" and represent_int(request[4:-14]):
+                # TODO
+                pass
+            else:
+                # TODO
+                pass
+        try:
+            self.connection.close()
+        except:
+            pass
+
+    def stop(self):
+        self.is_running = False
 
 
 class HttpProxyServer(threading.Thread):
 
-    def __init__(self, port):
+    def __init__(self, port, analyzer: ProxyAnalyzer):
         super().__init__()
         self.name = "HttpProxyServer-" + str(port)
         self.port: int = port
         self.socket: sc.socket = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
         self.connections = list()
         self.is_running = False
+        self.analyzer = analyzer
         # TODO start another socket for statistic queries
 
     def run(self) -> None:
@@ -84,34 +170,27 @@ class RequestHandler(threading.Thread):
             query = HTTP_request_parser(query.decode())
             if "Keep-Alive" in query.headers:
                 self.alive_time = time.time() + query.headers["Keep-Alive"]
+            if "Connection" in query.headers and query.headers["Connection"] == "close":
+                self.alive_time = time.time()
             url, path = split_url(query.URL)
-            print("Send: ")
-            print(query)
-            print(":)")
-            print(url)
-            print(path)
-            print("End send message")
             if self.target_connection is None:
                 self.target_connection = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
                 self.target_connection.connect((sc.gethostbyname(url), 80))
             server_message = HTTPRequest.create_server_request(query, path)
-            print("Server mess:")
-            print(server_message)
-            print("end serv mess")
+            print("message: " + str(server_message))
             try:
                 self.target_connection.send(server_message.to_byte())
             except:
                 break
             response = self.read_response()
             print("response: " + str(response))
-            if response == -1 or response is None or len(response) == 0:
+            if response is None or len(response) == 0:
                 break
             try:
                 self.connection.send(response)
             except:
                 break
-            # TODO: parse request and convert it to another query and open connection of it is closed.
-            # TODO: handle if query has body (content-length)
+
         try:
             self.connection.close()
         except:
@@ -126,7 +205,7 @@ class RequestHandler(threading.Thread):
         headers, tmp_body = self.read_chunck(self.target_connection)
         print("headers: " + str(headers))
         if headers == -1:
-            return -1
+            return None
         headers_lines = headers.decode().split("\r\n")[1:]
         is_chunk = False
         content_len = 0
@@ -141,7 +220,7 @@ class RequestHandler(threading.Thread):
         body = tmp_body + self.read_body(content_len - len(tmp_body), self.target_connection, is_chunk)
         print("body: " + str(body))
         if body == -1:
-            return -1
+            return None
         headers.extend(body)
         return headers
 
