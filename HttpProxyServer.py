@@ -2,6 +2,8 @@ import socket as sc
 import threading
 import time
 import statistics
+from wsgiref.handlers import format_date_time
+
 
 from ProxyUtils import *
 
@@ -263,9 +265,9 @@ class RequestHandler(threading.Thread):
             if query.headers.__contains__("Connection") or query.headers.__contains__("Proxy-Connection"):
                 if query.headers.__contains__("Keep-Alive"):
                     self.alive_time = time.time() + query.headers["Keep-Alive"] + 3
-                if query.headers.__contains__("Connection") and query.headers["Connection"] == "close":
+                if query.headers.__contains__("Connection") and query.headers["Connection"].lower() == "close":
                     self.alive_time = time.time()
-                if query.headers.__contains__("Proxy-Connection") and query.headers["Proxy-Connection"] == "close":
+                if query.headers.__contains__("Proxy-Connection") and query.headers["Proxy-Connection"].lower() == "close":
                     self.alive_time = time.time()
             url, path = split_url(query.URL)
             self.analyzer.add_visitor(url)
@@ -273,18 +275,23 @@ class RequestHandler(threading.Thread):
                 self.target_connection = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
                 self.target_connection.connect((sc.gethostbyname(url), 80))
             server_message = HTTPProxyRequest.create_server_request(query, path)
-            print("message: " + str(server_message))
+            print("Request: " + format_date_time(time.time()) + " "  + str(self.client_address) +  " ["
+                  + sc.gethostbyname(url) + "," + str(80) + "]" + query.to_byte().decode().splitlines()[0])
             try:
                 self.target_connection.send(server_message.to_byte())
             except:
                 break
             response = self.read_response()
-            print("response: " + str(response))
             if response is None or len(response) == 0:
                 break
             try:
                 self.connection.send(response)
                 self.analyzer.handle_server_packet(HTTP_response_parser(response.decode()))
+
+                print("Response: " + format_date_time(time.time()) + " " + str(self.client_address) + " ["
+                      + sc.gethostbyname(url) + "," + str(80) + "]" + response.decode().splitlines()[0] + " for "
+                      + query.to_byte().decode().splitlines()[0] )
+
             except:
                 break
 
@@ -300,7 +307,6 @@ class RequestHandler(threading.Thread):
 
     def read_response(self):
         headers, tmp_body = self.read_chunck(self.target_connection)
-        print("headers: " + str(headers))
         if headers == -1:
             return None
         headers_lines = headers.decode().split("\r\n")[1:]
@@ -312,10 +318,7 @@ class RequestHandler(threading.Thread):
                 content_len = int(spited[1])
             elif spited[0] == "Transfer-Encoding" and spited[1] == "chunked":
                 is_chunk = True
-        print("content: " + str(content_len))
-        print("tr_en: " + str(is_chunk))
         body = tmp_body + self.read_body(content_len - len(tmp_body), self.target_connection, is_chunk)
-        print("body: " + str(body))
         if body == -1:
             return None
         headers.extend(body)
@@ -326,7 +329,6 @@ class RequestHandler(threading.Thread):
         while True:
             try:
                 data = connection.recv(2048)
-                print("in read_chunck: " + data.decode())
                 input_data.extend(data)
                 if not data or "\r\n\r\n" in input_data.decode():
                     break

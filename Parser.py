@@ -79,7 +79,7 @@ def HTTP_request_parser(msg):
     for i in range(len(headers)):
         h = headers[i]
         if h[0] == CONNECTION_HEADER:
-            if h[1] != "close" and h[1] != "keep-alive":
+            if h[1].lower() != "close" and h[1].lower() != "keep-alive":
                 raise Exception
             connection = h[1]
             for tmp_h in headers:

@@ -1,6 +1,7 @@
 import threading
 import time
 import socket as sc
+from wsgiref.handlers import format_date_time
 import ResponseCreator
 import HP
 
@@ -72,7 +73,6 @@ class RequestHandler(threading.Thread):
                 try:
                     self.connection.settimeout(self.alive_time - time.time())
                     data = self.connection.recv(2048)
-                    print(data.decode())
                     input_data.extend(data)
                     if not data or data.decode().splitlines()[-1] == "":
                         break
@@ -82,6 +82,8 @@ class RequestHandler(threading.Thread):
             print(input_data.decode())
             data, keep_alive = ResponseCreator.response_creator(input_data.decode())
             self.connection.send(data.to_byte())
+            print("[" + format_date_time(time.time()) + "]\t" + input_data.decode().splitlines()[0] + "\t" +
+                  data.to_byte().decode().splitlines()[0])
             if keep_alive:
                 self.alive_time = time.time() + keep_alive
             else:
@@ -92,3 +94,4 @@ class RequestHandler(threading.Thread):
 
     def stop(self):
         self.is_running = False
+        self.connection.close()
