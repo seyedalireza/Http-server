@@ -88,7 +88,10 @@ class RequestHandler(threading.Thread):
             else:
                 self.connection.close()
                 return
-        self.connection.close()
+        try:
+            self.connection.close()
+        except:
+            pass
         self.is_running = False
 
     def stop(self):
