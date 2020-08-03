@@ -83,7 +83,7 @@ class RequestHandler(threading.Thread):
             data, keep_alive = ResponseCreator.response_creator(input_data.decode())
             self.connection.send(data.to_byte())
             print("[" + format_date_time(time.time()) + "]\t" + input_data.decode().splitlines()[0] + "\t" +
-                  data.to_byte().decode().splitlines()[0])
+                  data.header_str().splitlines()[0])
             if keep_alive:
                 self.alive_time = time.time() + keep_alive
             else:

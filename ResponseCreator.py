@@ -38,7 +38,6 @@ class HTTPResponse(HTTPMessage):
 
     def to_byte(self):
         ret = self.header_str().encode()
-        print(type(ret))
         ret = ret + self.body
         return ret
 
