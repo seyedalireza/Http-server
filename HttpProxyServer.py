@@ -259,10 +259,13 @@ class RequestHandler(threading.Thread):
                 break
             self.analyzer.handle_client_packet(query)
             query = HTTP_request_parser(query.decode())
-            if query.headers.__contains__("Keep-Alive"):
-                self.alive_time = time.time() + query.headers["Keep-Alive"]
-            if query.headers.__contains__("Connection") and query.headers["Connection"] == "close":
-                self.alive_time = time.time()
+            if query.headers.__contains__("Connection") or query.headers.__contains__("Proxy-Connection"):
+                if query.headers.__contains__("Keep-Alive"):
+                    self.alive_time = time.time() + query.headers["Keep-Alive"]
+                if query.headers.__contains__("Connection") and query.headers["Connection"] == "close":
+                    self.alive_time = time.time()
+                if query.headers.__contains__("Proxy-Connection") and query.headers["Proxy-Connection"] == "close":
+                    self.alive_time = time.time()
             url, path = split_url(query.URL)
             self.analyzer.add_visitor(url)
             if self.target_connection is None:
