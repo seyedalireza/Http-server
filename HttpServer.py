@@ -74,12 +74,11 @@ class RequestHandler(threading.Thread):
                     self.connection.settimeout(self.alive_time - time.time())
                     data = self.connection.recv(2048)
                     input_data.extend(data)
-                    if not data or data.decode().splitlines()[-1] == "":
+                    if not data or (b"\r\n" in input_data):
                         break
                 except:
                     self.connection.close()
                     return
-            print(input_data.decode())
             data, keep_alive = ResponseCreator.response_creator(input_data.decode())
             self.connection.send(data.to_byte())
             print("[" + format_date_time(time.time()) + "]\t" + input_data.decode().splitlines()[0] + "\t" +
@@ -94,4 +93,7 @@ class RequestHandler(threading.Thread):
 
     def stop(self):
         self.is_running = False
-        self.connection.close()
+        try:
+            self.connection.close()
+        except:
+            pass
