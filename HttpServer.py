@@ -39,7 +39,10 @@ class HttpServer(threading.Thread):
         """
         Stop Http server and close connections.
         """
-        self.socket.close()
+        try:
+            self.socket.close()
+        except:
+            pass
         self.is_running = False
         for rh in self.connections:
             if rh.is_running:
@@ -77,7 +80,10 @@ class RequestHandler(threading.Thread):
                     if not data or (b"\r\n" in input_data):
                         break
                 except:
-                    self.connection.close()
+                    try:
+                        self.connection.close()
+                    except:
+                        pass
                     return
             data, keep_alive = ResponseCreator.response_creator(input_data.decode())
             self.connection.send(data.to_byte())

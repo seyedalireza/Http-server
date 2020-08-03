@@ -209,7 +209,10 @@ class HttpProxyServer(threading.Thread):
         """
         Stop Http server and close connections.
         """
-        self.socket.close()
+        try:
+            self.socket.close()
+        except:
+            pass
         self.is_running = False
         for rh in self.connections:
             if rh.is_running:
@@ -327,7 +330,10 @@ class RequestHandler(threading.Thread):
                 if not data or "\r\n\r\n" in input_data.decode():
                     break
             except:
-                connection.close()
+                try:
+                    connection.close()
+                except:
+                    pass
                 return -1, None
         end_header = input_data.find(b"\r\n\r\n")
         return input_data[:end_header + 4], input_data[end_header + 4:]
@@ -342,7 +348,10 @@ class RequestHandler(threading.Thread):
                     break
                 input_data.extend(data)
             except:
-                socket.close()
+                try:
+                    socket.close()
+                except:
+                    pass
                 return -1
         return input_data
 
