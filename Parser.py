@@ -68,11 +68,13 @@ def HTTP_request_parser(msg):
     else:
         return None
     headers = []
-    for i in range(1, len(parts) - 2):
+    i = 1
+    while parts[i] != "":
         if not (": " in parts[i]):
             return None
         tmp = parts[i].split(": ")
         headers.append([tmp[0], parts[i][len(tmp[0]) + 2:]])
+        i += 1
     connection = None
     keep_alive = None
     accept_encoding = None
@@ -93,6 +95,9 @@ def HTTP_request_parser(msg):
             tmp = h[1].split(', ')
             if "gzip" in tmp:
                 accept_encoding = "gzip"
+    body = ""
+    for j in range(i + 1, len(parts)):
+        body = body + parts[j]
     http_req_retv = HTTPRequest(method=method, URL=URL, version=version, connection=connection, keep_alive=keep_alive,
-                                accept_encoding=accept_encoding, body=parts[-1])
+                                accept_encoding=accept_encoding, body=body)
     return http_req_retv
