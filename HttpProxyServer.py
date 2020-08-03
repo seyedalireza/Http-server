@@ -4,7 +4,6 @@ import time
 import statistics
 from wsgiref.handlers import format_date_time
 
-
 from ProxyUtils import *
 
 
@@ -29,9 +28,7 @@ class ProxyAnalyzer(threading.Thread):
         socket.bind(("localhost", self.port))
         socket.listen()
         while self.is_running:
-            print("Proxy analyzer waiting for connection")
             connection, address = socket.accept()
-            print("connection established for proxy analyzer")
             analyze_handler = AnalyzerHandler(connection, address, self)
             self.connections.append(analyze_handler)
             analyze_handler.start()
@@ -48,7 +45,6 @@ class ProxyAnalyzer(threading.Thread):
 
     def handle_client_packet(self, pkt: bytearray):
         self.client_packet_lengths.append(len(pkt))
-        print("Client: " + str(self.client_packet_lengths))
 
     def handle_server_packet(self, http_response: HTTPProxyResponse):
         self.server_packet_lengths.append(len(http_response.to_byte()))
@@ -64,18 +60,11 @@ class ProxyAnalyzer(threading.Thread):
                 if not self.type_count.__contains__(t):
                     self.type_count[t] = 0
                 self.type_count[t] += 1
-        print("Server:")
-        print(self.server_packet_lengths)
-        print(self.server_body_lengths)
-        print(self.type_count)
-        print(self.status_count)
 
     def add_visitor(self, url: str):
         if not self.visits.__contains__(url):
             self.visits[url] = 0
         self.visits[url] += 1
-        print("Visited:")
-        print(self.visits)
 
 
 def represent_int(param):
@@ -179,6 +168,10 @@ class AnalyzerHandler(threading.Thread):
 
     def stop(self):
         self.is_running = False
+        try:
+            self.connection.close()
+        except:
+            pass
 
 
 class HttpProxyServer(threading.Thread):
@@ -256,18 +249,19 @@ class RequestHandler(threading.Thread):
         """
         self.is_running = True
         while time.time() <= self.alive_time and self.is_running:
-            self.connection.settimeout(self.alive_time - time.time() + 5)
+            self.connection.settimeout(self.alive_time - time.time())
             query, _ = self.read_chunck(self.connection)
             if query == -1 or query is None or len(query) == 0:
-                continue
+                break
             self.analyzer.handle_client_packet(query)
             query = HTTP_request_parser(query.decode())
             if query.headers.__contains__("Connection") or query.headers.__contains__("Proxy-Connection"):
                 if query.headers.__contains__("Keep-Alive"):
-                    self.alive_time = time.time() + query.headers["Keep-Alive"] + 3
+                    self.alive_time = time.time() + query.headers["Keep-Alive"]
                 if query.headers.__contains__("Connection") and query.headers["Connection"].lower() == "close":
                     self.alive_time = time.time()
-                if query.headers.__contains__("Proxy-Connection") and query.headers["Proxy-Connection"].lower() == "close":
+                if query.headers.__contains__("Proxy-Connection") and query.headers[
+                    "Proxy-Connection"].lower() == "close":
                     self.alive_time = time.time()
             url, path = split_url(query.URL)
             self.analyzer.add_visitor(url)
@@ -275,8 +269,8 @@ class RequestHandler(threading.Thread):
                 self.target_connection = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
                 self.target_connection.connect((sc.gethostbyname(url), 80))
             server_message = HTTPProxyRequest.create_server_request(query, path)
-            print("Request: " + format_date_time(time.time()) + " "  + str(self.client_address) +  " ["
-                  + sc.gethostbyname(url) + "," + str(80) + "]" + query.to_byte().decode().splitlines()[0])
+            print("Request: " + format_date_time(time.time()) + " " + str(self.client_address) + " ["
+                  + sc.gethostbyname(url) + "," + str(80) + "] " + query.to_byte().decode().splitlines()[0])
             try:
                 self.target_connection.send(server_message.to_byte())
             except:
@@ -289,8 +283,8 @@ class RequestHandler(threading.Thread):
                 self.analyzer.handle_server_packet(HTTP_response_parser(response.decode()))
 
                 print("Response: " + format_date_time(time.time()) + " " + str(self.client_address) + " ["
-                      + sc.gethostbyname(url) + "," + str(80) + "]" + response.decode().splitlines()[0] + " for "
-                      + query.to_byte().decode().splitlines()[0] )
+                      + sc.gethostbyname(url) + "," + str(80) + "] " + response.decode().splitlines()[0] + " for "
+                      + query.to_byte().decode().splitlines()[0])
 
             except:
                 break
@@ -354,3 +348,7 @@ class RequestHandler(threading.Thread):
 
     def stop(self):
         self.is_running = False
+        try:
+            self.connection.close()
+        except:
+            pass
