@@ -5,6 +5,7 @@ import statistics
 from wsgiref.handlers import format_date_time
 
 from ProxyUtils import *
+import HP
 
 
 class ProxyAnalyzer(threading.Thread):
@@ -262,7 +263,7 @@ class RequestHandler(threading.Thread):
                     if query.headers.__contains__("Keep-Alive"):
                         self.alive_time = time.time() + int(query.headers["Keep-Alive"])
                     else:
-                        self.alive_time = time.time() + 60
+                        self.alive_time = time.time() + HP.DEFAULT_KEEP_ALIVE_TIME
                     if query.headers.__contains__("Connection") and query.headers["Connection"].lower() == "close":
                         self.alive_time = time.time()
                     if query.headers.__contains__("Proxy-Connection") and query.headers[
