@@ -220,12 +220,19 @@ class HttpProxyServer(threading.Thread):
 
 
 def split_url(url: str):
+    defult_port = 80
     if url.lower().startswith("http://"):
         spited = url.split("/")
-        return spited[2], "/" + "/".join(spited[3:])
+        if ":" in spited[2]:
+            host = spited[2].split(":")
+            return host[0], "/" + "/".join(spited[3:]), int(host[1])
+        return spited[2], "/" + "/".join(spited[3:]), defult_port
     else:
         spited = url.split("/")
-        return spited[0], "/" + "/".join(spited[1:])
+        if ":" in spited[0]:
+            host = spited[0].split(":")
+            return host[0], "/" + "/".join(spited[1:]), int(host[1])
+        return spited[0], "/" + "/".join(spited[1:]), defult_port
 
 
 class RequestHandler(threading.Thread):
