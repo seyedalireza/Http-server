@@ -82,9 +82,12 @@ def HTTP_response_parser(msg):
         v = None
         if len(tmp) >= 1:
             v = get_version(tmp[0])
-        if len(tmp) != 3 or len(tmp[1]) == 0 or len(tmp[2]) == 0 or v is None:
+        status_msg = ""
+        if len(tmp) >= 3:
+            status_msg = " ".join(tmp[2:])
+        if len(tmp) < 3 or len(tmp[1]) == 0 or len(status_msg) == 0 or v is None:
             return False, None, None, None
-        return True, v, tmp[1], tmp[2]
+        return True, v, tmp[1], status_msg
 
     parts = msg.split("\r\n")
     if len(parts) >= 3:
