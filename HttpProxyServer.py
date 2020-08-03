@@ -254,14 +254,15 @@ class RequestHandler(threading.Thread):
         """
         self.is_running = True
         while time.time() <= self.alive_time and self.is_running:
+            self.connection.settimeout(self.alive_time - time.time() + 5)
             query, _ = self.read_chunck(self.connection)
             if query == -1 or query is None or len(query) == 0:
-                break
+                continue
             self.analyzer.handle_client_packet(query)
             query = HTTP_request_parser(query.decode())
             if query.headers.__contains__("Connection") or query.headers.__contains__("Proxy-Connection"):
                 if query.headers.__contains__("Keep-Alive"):
-                    self.alive_time = time.time() + query.headers["Keep-Alive"]
+                    self.alive_time = time.time() + query.headers["Keep-Alive"] + 3
                 if query.headers.__contains__("Connection") and query.headers["Connection"] == "close":
                     self.alive_time = time.time()
                 if query.headers.__contains__("Proxy-Connection") and query.headers["Proxy-Connection"] == "close":
@@ -324,7 +325,6 @@ class RequestHandler(threading.Thread):
         input_data = bytearray()
         while True:
             try:
-                connection.settimeout(self.alive_time - time.time())
                 data = connection.recv(2048)
                 print("in read_chunck: " + data.decode())
                 input_data.extend(data)
@@ -338,10 +338,10 @@ class RequestHandler(threading.Thread):
 
     def read_body(self, length, socket, is_chunk: bool):
         input_data = bytearray()
+        # socket.settimeout(60)
         while is_chunk or len(input_data) < length:
             try:
-                socket.settimeout(self.alive_time - time.time())
-                data = socket.recv(2048)
+                data = socket.recv(16384)
                 if is_chunk and len(data) == 0:
                     break
                 input_data.extend(data)

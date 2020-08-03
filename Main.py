@@ -14,11 +14,11 @@ if __name__ == "__main__":
 
         proxy_server.setDaemon(True)
         proxy_server.start()
-        atexit.register(proxy_server.stop)
 
         httpServer.setDaemon(True)
         httpServer.start()
         atexit.register(httpServer.stop)
+        atexit.register(proxy_server.stop)
         httpServer.join()
         proxy_server.join()
         analyzer.join()
