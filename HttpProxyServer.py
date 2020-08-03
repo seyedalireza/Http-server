@@ -92,7 +92,6 @@ class AnalyzerHandler(threading.Thread):
         self.client_address = client_address
         self.is_running = False
         self.analyzer = analyzer
-        self.connection.settimeout(60)
 
     def run(self) -> None:
         self.is_running = True
@@ -109,21 +108,39 @@ class AnalyzerHandler(threading.Thread):
                 msg = ""
 
                 msg = msg + "Packet length received from server(mean, std): ("
-                msg = msg + str(statistics.mean(self.analyzer.client_packet_lengths))
+                if len(self.analyzer.client_packet_lengths) > 0:
+                    msg = msg + str(statistics.mean(self.analyzer.client_packet_lengths))
+                else:
+                    msg = msg + "0"
                 msg = msg + ", "
-                msg = msg + str(statistics.stdev(self.analyzer.client_packet_lengths))
+                if len(self.analyzer.client_packet_lengths) > 1:
+                    msg = msg + str(statistics.stdev(self.analyzer.client_packet_lengths))
+                else:
+                    msg = msg + "0"
                 msg = msg + ")\n"
 
                 msg = msg + "Packet length received from client(mean, std): ("
-                msg = msg + str(statistics.mean(self.analyzer.server_packet_lengths))
+                if len(self.analyzer.server_packet_lengths) > 0:
+                    msg = msg + str(statistics.mean(self.analyzer.server_packet_lengths))
+                else:
+                    msg = msg + "0"
                 msg = msg + ", "
-                msg = msg + str(statistics.stdev(self.analyzer.server_packet_lengths))
+                if len(self.analyzer.server_packet_lengths) > 1:
+                    msg = msg + str(statistics.stdev(self.analyzer.server_packet_lengths))
+                else:
+                    msg = msg + "0"
                 msg = msg + ")\n"
 
                 msg = msg + "Body length received from server(mean, std): ("
-                msg = msg + str(statistics.mean(self.analyzer.server_body_lengths))
+                if len(self.analyzer.server_body_lengths) > 0:
+                    msg = msg + str(statistics.mean(self.analyzer.server_body_lengths))
+                else:
+                    msg = msg + "0"
                 msg = msg + ", "
-                msg = msg + str(statistics.stdev(self.analyzer.server_body_lengths))
+                if len(self.analyzer.server_body_lengths) > 1:
+                    msg = msg + str(statistics.stdev(self.analyzer.server_body_lengths))
+                else:
+                    msg = msg + "0"
                 msg = msg + ")\n"
 
                 self.connection.send(msg.encode())
@@ -145,8 +162,8 @@ class AnalyzerHandler(threading.Thread):
                     sites.append([visit, site])
                 sites.sort()
                 msg = ""
-                for i in range(min(k, len(sites)) - 1, -1, -1):
-                    msg = msg + str(min(k, len(sites)) - i) + ". " + sites[i][1] + "\n"
+                for i in range(len(sites) - 1, len(sites) - min(k, len(sites)) - 1, -1):
+                    msg = msg + str(len(sites) - i) + ". " + sites[i][1] + "\n"
                 self.connection.send(msg.encode())
             elif request == "exit":
                 self.connection.send(b"Bye\n")
