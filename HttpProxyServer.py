@@ -278,17 +278,17 @@ class RequestHandler(threading.Thread):
                         self.alive_time = time.time()
             except:
                 pass
-            url, path = split_url(query.URL)
+            url, path, port = split_url(query.URL)
             self.analyzer.add_visitor(url)
             try:
                 if self.target_connection is None:
                     self.target_connection = sc.socket(sc.AF_INET, sc.SOCK_STREAM)
-                    self.target_connection.connect((sc.gethostbyname(url), 80))
+                    self.target_connection.connect((sc.gethostbyname(url), port))
                 server_message = HTTPProxyRequest.create_server_request(query, path)
             except:
                 break
             print("Request: " + format_date_time(time.time()) + " " + str(self.client_address) + " ["
-                  + url + "," + str(80) + "]" + query.to_byte().decode().splitlines()[0])
+                  + url + "," + str(port) + "]" + query.to_byte().decode().splitlines()[0])
             try:
                 self.target_connection.send(server_message.to_byte())
             except:
@@ -298,7 +298,7 @@ class RequestHandler(threading.Thread):
                 break
 
             print("Response: " + format_date_time(time.time()) + " " + str(self.client_address) + " ["
-                  + url + "," + str(80) + "]" + headers.decode().splitlines()[0] + " for "
+                  + url + "," + str(port) + "]" + headers.decode().splitlines()[0] + " for "
                   + query.to_byte().decode().splitlines()[0])
             try:
                 self.connection.send(response)
