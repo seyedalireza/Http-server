@@ -1,4 +1,4 @@
-class HTTPRequest:
+class HTTPProxyRequest:
     def __init__(self, method, URL, version=None, headers=None, body=None):
         self.method = method
         self.URL = URL
@@ -19,7 +19,7 @@ class HTTPRequest:
 
     @staticmethod
     def create_server_request(request, path: str):
-        new = HTTPRequest(method=request.method, URL=path, version=request.version, body=request.body)
+        new = HTTPProxyRequest(method=request.method, URL=path, version=request.version, body=request.body)
         new.headers = request.headers
         if "Proxy-Connection" in request.headers:
             new.headers["Connection"] = request.headers["Proxy-Connection"]
@@ -28,13 +28,13 @@ class HTTPRequest:
 
     def header_str(self):
         ret = str(self.method) + " " + str(self.URL) + " " + "HTTP/" + str(self.version) + "\r\n"
-        for header, value in self.headers:
+        for header, value in self.headers.items():
             ret = ret + str(header) + ": " + str(value) + "\r\n"
         ret = ret + "\r\n"
         return ret
 
 
-class HTTPProxyMessage:
+class HTTPProxyResponse:
     def __init__(self, status_code, status_message, version=None, headers=None, body=None):
         self.status_code = status_code
         self.status_msg = status_message
@@ -48,14 +48,14 @@ class HTTPProxyMessage:
 
     def header_str(self):
         ret = "HTTP/" + str(self.version) + " " + str(self.status_code) + " " + str(self.status_msg) + "\r\n"
-        for header, value in self.headers:
+        for header, value in self.headers.items():
             ret = ret + str(header) + ": " + str(value) + "\r\n"
         ret = ret + "\r\n"
         return ret
 
     def to_byte(self):
         ret = self.header_str().encode()
-        ret = ret + self.body
+        ret = ret + self.body.encode()
         return ret
 
 
@@ -74,6 +74,39 @@ def get_version(param):
     except ValueError:
         return None
     return float(s[1])
+
+
+def HTTP_response_parser(msg):
+    def request_line_parser(line):
+        tmp = line.split(' ')
+        v = None
+        if len(tmp) >= 1:
+            v = get_version(tmp[0])
+        if len(tmp) != 3 or len(tmp[1]) == 0 or len(tmp[2]) == 0 or v is None:
+            return False, None, None, None
+        return True, v, tmp[1], tmp[2]
+
+    parts = msg.split("\r\n")
+    if len(parts) >= 3:
+        ok, version, code, phrase = request_line_parser(parts[0])
+        if not ok:
+            return None
+    else:
+        return None
+    headers = dict({})
+    i = 1
+    while parts[i] != "":
+        if not (": " in parts[i]):
+            return None
+        tmp = parts[i].split(": ")
+        headers[tmp[0]] = parts[i][len(tmp[0]) + 2:]
+        i += 1
+    body = ""
+    for j in range(i + 1, len(parts)):
+        body = body + parts[j]
+    http_response_retv = HTTPProxyResponse(status_code=code, status_message=phrase, version=version, headers=headers,
+                                           body=body)
+    return http_response_retv
 
 
 def HTTP_request_parser(msg):
@@ -100,12 +133,17 @@ def HTTP_request_parser(msg):
             return None
     else:
         return None
-    headers = []
-    for i in range(1, len(parts) - 2):
+    headers = dict({})
+    i = 1
+    while parts[i] != "":
         if not (": " in parts[i]):
             return None
         tmp = parts[i].split(": ")
-        headers.append([tmp[0], parts[i][len(tmp[0]) + 2:]])
-    http_req_retv = HTTPRequest(method=method, URL=URL, version=version, headers=headers,
-                                body=parts[-1])
+        headers[tmp[0]] = parts[i][len(tmp[0]) + 2:]
+        i += 1
+    body = ""
+    for j in range(i + 1, len(parts)):
+        body = body + parts[j]
+    http_req_retv = HTTPProxyRequest(method=method, URL=URL, version=version, headers=headers,
+                                     body=body)
     return http_req_retv
